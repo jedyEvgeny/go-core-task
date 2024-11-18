@@ -46,7 +46,7 @@ func createVariables() *variable {
 		numOct:      015,
 		numHex:      0x15,
 		numFloating: 15,
-		str:         "15",
+		str:         "15.0015",
 		ok:          true,
 		cpx:         15 + 15i,
 	}
