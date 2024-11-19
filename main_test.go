@@ -1,146 +1,124 @@
 package main
 
-import (
-	"bytes"
-	"fmt"
-	"log"
-	"os"
-	"testing"
-)
+import "testing"
 
-const errExpected = "\nОжидалось:\n\t%v\nПолучили\n\t%v\n"
+func TestCreateSlice(t *testing.T) {
+	arr1 := createSlice()
+	arr2 := createSlice()
 
-func TestCreateVariables(t *testing.T) {
-	testV := &variable{
-		numDec:      15,
-		numOct:      13,
-		numHex:      21,
-		numFloating: 15,
-		str:         "15.0015",
-		ok:          true,
-		cpx:         15 + 15i,
-	}
-	v := createVariables()
-
-	if testV.numDec != v.numDec {
-		v1, v2 := testV.numDec, v.numDec
-		t.Errorf(errExpected, v1, v2)
+	if len(arr1) != lenSlice || len(arr2) != lenSlice {
+		t.Errorf("\nДлина слайса должна быть:\n\t%d\nимеется:\n\t%d\n",
+			lenSlice, len(arr1))
 	}
 
-	if testV.numOct != v.numOct {
-		v1, v2 := testV.numOct, v.numOct
-		t.Errorf(errExpected, v1, v2)
+	var doubles int
+	minElem, maxElem := arr1[0], arr1[0]
+	for i := 0; i < lenSlice; i++ {
+		if arr1[i] == arr2[i] {
+			doubles++
+		}
+
+		if maxElem > arr1[i] {
+			maxElem = arr1[i]
+		}
+		if maxElem > arr2[i] {
+			maxElem = arr2[i]
+		}
+
+		if minElem < arr1[i] {
+			minElem = arr1[i]
+		}
+		if minElem < arr2[i] {
+			minElem = arr2[i]
+		}
 	}
 
-	if testV.numHex != v.numHex {
-		v1, v2 := testV.numHex, v.numHex
-		t.Errorf(errExpected, v1, v2)
+	if minElem < minElemSlice {
+		t.Errorf("\nМинимальный элемент слайса должен быть:\n\t%d\nимеется:\n\t%d\n",
+			minElemSlice, minElem)
+	}
+	if maxElem > maxElemSlice {
+		t.Errorf("\nМаксимальный элемент слайса должен быть:\n\t%d\nимеется:\n\t%d\n",
+			maxElemSlice, maxElem)
 	}
 
-	if testV.numFloating != v.numFloating {
-		v1, v2 := testV.numFloating, v.numFloating
-		t.Errorf(errExpected, v1, v2)
-	}
-
-	if testV.str != v.str {
-		v1, v2 := testV.str, v.str
-		t.Errorf(errExpected, v1, v2)
-	}
-
-	if testV.ok != v.ok {
-		v1, v2 := testV.ok, v.ok
-		t.Errorf(errExpected, v1, v2)
-	}
-
-	if testV.cpx != v.cpx {
-		v1, v2 := testV.cpx, v.cpx
-		t.Errorf(errExpected, v1, v2)
+	if doubles == lenSlice {
+		t.Errorf("\nОжидался случайный набор чисел\nИмеется:\n\t%d\nи\n\t%d",
+			arr1, arr2)
 	}
 }
 
-func TestDefineTypes(t *testing.T) {
-	v := &variable{}
+type evenTestCase struct {
+	input, expexted []int
+}
 
-	var buf bytes.Buffer
-	stdout := os.Stdout
-	defer func() {
-		os.Stdout = stdout
-	}()
-
-	r, out, _ := os.Pipe() // трубы для перенаправления
-	os.Stdout = out        // стандартный вывод не в терминал, а в "out"
-
-	go func() {
-		defer out.Close()
-		v.defineTypes()
-	}()
-
-	buf.ReadFrom(r)    // Читаем вывод функции из r
-	os.Stdout = stdout // Вернули стандартный вывод
-
-	output := buf.String()
-	expectedOutput := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n",
-		"Тип переменной `numDec`: int",
-		"Тип переменной `numOct`: int",
-		"Тип переменной `numHex`: int",
-		"Тип переменной `numFloating`: float64",
-		"Тип переменной `str`: string",
-		"Тип переменной `ok`: bool",
-		"Тип переменной `cpx`: complex64",
-	)
-
-	if output != expectedOutput {
-		t.Errorf(errExpected, output, expectedOutput)
+func TestSliceExample(t *testing.T) {
+	testCases := []evenTestCase{
+		{[]int{0}, []int{0}},
+		{[]int{1, 2, 3}, []int{2}},
+		{[]int{-100, 100}, []int{-100, 100}},
+		{[]int{-20, -10, -90}, []int{-20, -10, -90}},
+		{[]int{3, 5, 7}, []int{}},
+	}
+	for _, el := range testCases {
+		arr := sliceExample(el.input)
+		if !equalSlices(arr, el.expexted) {
+			t.Errorf("\nВходной слайс: %d\nОжидался результат:\n\t%d\nполучили:\n\t%d\n",
+				el.input, el.expexted, arr)
+		}
 	}
 }
 
-func TestCombineVariable(t *testing.T) {
-	expectedStr := "15151515.00000015.0015true(15+15i)"
-	v := &variable{
-		numDec:      15,
-		numOct:      13,
-		numHex:      21,
-		numFloating: 15,
-		str:         "15.0015",
-		ok:          true,
-		cpx:         15 + 15i,
+func equalSlices(arr1, arrTemplate []int) bool {
+	if len(arr1) != len(arrTemplate) {
+		return false
 	}
-	str := v.combineVariable()
+	for i := range arrTemplate {
+		if arrTemplate[i] != arr1[i] {
+			return false
+		}
+	}
+	return true
+}
 
-	if expectedStr != str {
-		t.Errorf(errExpected, expectedStr, str)
+func TestAddElements(t *testing.T) {
+	testArr := []int{1, 2, 3, 4, 5}
+	num := 7
+	expectedArr := []int{1, 2, 3, 4, 5, num}
+
+	arr := addElements(testArr, num)
+	if !equalSlices(arr, expectedArr) {
+		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
+			expectedArr, arr)
 	}
 }
 
-func TestCreateSliceRune(t *testing.T) {
-	str := "Привет, гофер!"
-	runs := createSliceRune(str)
+func TestCopySlice(t *testing.T) {
+	testArr := []int{1, 2, 3, 4, 5}
 
-	if str != string(runs) {
-		t.Errorf(errExpected, []rune(str), runs)
+	arr := copySlice(testArr)
+
+	testArr[0] = testArr[0] + 1
+	if equalSlices(arr, testArr) {
+		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
+			[]int{1, 2, 3, 4, 5}, arr)
+	}
+
+	testArr = append(testArr, testArr...)
+	if equalSlices(arr, testArr) {
+		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
+			[]int{1, 2, 3, 4, 5}, arr)
 	}
 }
 
-func TestHashRuns(t *testing.T) {
-	expectedHash := "a05865a825b7b242155f7edd06c55a901208e3bdfa22bccf36d1460772bdc884"
-	input := "hello"
-	actualHash, err := hashRuns([]rune(input))
-	if err != nil {
-		log.Fatal(err)
-	}
+func TestRemoveElement(t *testing.T) {
+	testArr := []int{1, 2, 3, 4, 5}
+	expectedArr := []int{2, 3, 4, 5}
+	idxForRemove := 0
+	arrAfterDropElem := removeElement(testArr, idxForRemove)
 
-	if actualHash != expectedHash {
-		t.Errorf(errExpected, expectedHash, actualHash)
-	}
-}
-
-func TestCreateStrWithSalt(t *testing.T) {
-	expectedStr := "he" + salt + "llo"
-
-	in := "hello"
-	str := createStrWithSalt([]rune(in))
-
-	if str != expectedStr {
-		t.Errorf(errExpected, expectedStr, str)
+	if !equalSlices(arrAfterDropElem, expectedArr) {
+		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
+			expectedArr, arrAfterDropElem)
 	}
 }

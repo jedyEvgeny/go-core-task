@@ -1,91 +1,73 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"log"
+
+	"math/rand"
 )
 
-type variable struct {
-	numDec      int
-	numOct      int
-	numHex      int
-	numFloating float64
-	str         string
-	ok          bool
-	cpx         complex64
-}
-
-const salt = "go-2024"
+const (
+	lenSlice     = 10
+	minElemSlice = -100
+	maxElemSlice = 100
+)
 
 func main() {
-	v := createVariables()
-	fmt.Printf("Структура данных с переменными:\n\t%v\n\n", *v)
+	randNums := createSlice()
+	fmt.Printf("Исходный слайс:\n%d\n\n", randNums)
 
-	v.defineTypes()
+	evenNums := sliceExample(randNums)
+	fmt.Printf("Слайс чётных чисел из исходного:\n%d\n\n",
+		evenNums)
 
-	str := v.combineVariable()
-	fmt.Printf("Объединение переменных в строку:\n\t%s\n\n", str)
+	newNum := 5
+	nums := addElements(evenNums, newNum)
+	fmt.Printf("Слайс чётных чисел + цифра %d:\n%d\n\n",
+		newNum, nums)
 
-	runs := createSliceRune(str)
-	fmt.Printf("Срез рун из строки:\n\t%v\n\n", runs)
+	copyNums := copySlice(nums)
 
-	hRuns, err := hashRuns(runs)
-	if err != nil {
-		log.Fatal(err)
+	idxForDelete := 0
+	nums = removeElement(nums, idxForDelete)
+
+	fmt.Printf("Копия слайса чётных чисел + цифра %d:\n%d\n\n",
+		newNum, copyNums)
+	fmt.Printf("Слайс после удаления элемента с индексом %d:\n%d\n",
+		idxForDelete, nums)
+}
+
+// createSlice генерирует слайс случайных чисел от -100 до 100.
+// Логика работает для Go 1.20+, иначе будут псевдослучайные числа
+func createSlice() []int {
+	numbers := make([]int, lenSlice)
+	for i := 0; i < len(numbers); i++ {
+		numbers[i] = rand.Intn(maxElemSlice*2+1) + minElemSlice
 	}
-	fmt.Printf("Хеш из рун и соли `%s`: \n\t%s\n", salt, hRuns)
+	return numbers
 }
 
-func createVariables() *variable {
-	return &variable{
-		numDec:      15,
-		numOct:      015,
-		numHex:      0x15,
-		numFloating: 15,
-		str:         "15.0015",
-		ok:          true,
-		cpx:         15 + 15i,
+// sliceExample возвращает слайс чётных чисел исходного слайса
+func sliceExample(nums []int) []int {
+	var evenNums []int
+	for _, num := range nums {
+		if num%2 == 0 {
+			evenNums = append(evenNums, num)
+		}
 	}
+	return evenNums
 }
 
-func (v *variable) defineTypes() {
-	fmt.Printf("Тип переменной `numDec`: %T\n", v.numDec)
-	fmt.Printf("Тип переменной `numOct`: %T\n", v.numOct)
-	fmt.Printf("Тип переменной `numHex`: %T\n", v.numHex)
-	fmt.Printf("Тип переменной `numFloating`: %T\n", v.numFloating)
-	fmt.Printf("Тип переменной `str`: %T\n", v.str)
-	fmt.Printf("Тип переменной `ok`: %T\n", v.ok)
-	fmt.Printf("Тип переменной `cpx`: %T\n", v.cpx)
-	fmt.Println()
+func addElements(nums []int, elem int) []int {
+	return append(nums, elem)
 }
 
-func (v *variable) combineVariable() string {
-	return fmt.Sprintf("%d%o%x%f%s%v%v",
-		v.numDec, v.numOct, v.numHex, v.numFloating, v.str, v.ok, v.cpx)
+func copySlice(nums []int) []int {
+	arr := make([]int, len(nums))
+	copy(arr, nums)
+	return arr
 }
 
-func createSliceRune(str string) []rune {
-	return []rune(str)
-}
-
-func hashRuns(runs []rune) (string, error) {
-	res := createStrWithSalt(runs)
-	h := sha256.New()
-	_, err := io.WriteString(h, res)
-	if err != nil {
-		return "", fmt.Errorf("не смогли создать хеш: %w", err)
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-func createStrWithSalt(runs []rune) string {
-	var buf bytes.Buffer
-	buf.WriteString(string(runs[:len(runs)/2]))
-	buf.WriteString(salt)
-	buf.WriteString(string(runs[len(runs)/2:]))
-	return buf.String()
+func removeElement(nums []int, idx int) []int {
+	nums = append(nums[:idx], nums[idx+1:]...)
+	return nums
 }
