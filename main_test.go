@@ -2,123 +2,280 @@ package main
 
 import "testing"
 
-func TestCreateSlice(t *testing.T) {
-	arr1 := createSlice()
-	arr2 := createSlice()
-
-	if len(arr1) != lenSlice || len(arr2) != lenSlice {
-		t.Errorf("\nДлина слайса должна быть:\n\t%d\nимеется:\n\t%d\n",
-			lenSlice, len(arr1))
-	}
-
-	var doubles int
-	minElem, maxElem := arr1[0], arr1[0]
-	for i := 0; i < lenSlice; i++ {
-		if arr1[i] == arr2[i] {
-			doubles++
-		}
-
-		if maxElem > arr1[i] {
-			maxElem = arr1[i]
-		}
-		if maxElem > arr2[i] {
-			maxElem = arr2[i]
-		}
-
-		if minElem < arr1[i] {
-			minElem = arr1[i]
-		}
-		if minElem < arr2[i] {
-			minElem = arr2[i]
-		}
-	}
-
-	if minElem < minElemSlice {
-		t.Errorf("\nМинимальный элемент слайса должен быть:\n\t%d\nимеется:\n\t%d\n",
-			minElemSlice, minElem)
-	}
-	if maxElem > maxElemSlice {
-		t.Errorf("\nМаксимальный элемент слайса должен быть:\n\t%d\nимеется:\n\t%d\n",
-			maxElemSlice, maxElem)
-	}
-
-	if doubles == lenSlice {
-		t.Errorf("\nОжидался случайный набор чисел\nИмеется:\n\t%d\nи\n\t%d",
-			arr1, arr2)
-	}
+type addTestCase struct {
+	key         string
+	val         int
+	expectedMap map[string]int
 }
 
-type evenTestCase struct {
-	input, expexted []int
-}
-
-func TestSliceExample(t *testing.T) {
-	testCases := []evenTestCase{
-		{[]int{0}, []int{0}},
-		{[]int{1, 2, 3}, []int{2}},
-		{[]int{-100, 100}, []int{-100, 100}},
-		{[]int{-20, -10, -90}, []int{-20, -10, -90}},
-		{[]int{3, 5, 7}, []int{}},
+func TestAdd(t *testing.T) {
+	testCases := []addTestCase{
+		{"О", 1, map[string]int{"О": 1}},
+		{"Д", 2, map[string]int{"О": 1, "Д": 2}},
+		{"Т", 3, map[string]int{"О": 1, "Д": 2, "Т": 3}},
+		{"Ч", 4, map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4}},
+		{"F", 5, map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4, "F": 5}},
 	}
+	si := &stringIntMap{make(map[string]int)}
+
 	for _, el := range testCases {
-		arr := sliceExample(el.input)
-		if !equalSlices(arr, el.expexted) {
-			t.Errorf("\nВходной слайс: %d\nОжидался результат:\n\t%d\nполучили:\n\t%d\n",
-				el.input, el.expexted, arr)
+		si.add(el.key, el.val)
+		if !isEqualMaps(si.stringInts, el.expectedMap) {
+			t.Errorf("\nОжидалась карта:\n\t%v\nимеется:\n\t%v\n",
+				el.expectedMap, *si)
 		}
 	}
 }
 
-func equalSlices(arr1, arrTemplate []int) bool {
-	if len(arr1) != len(arrTemplate) {
+func isEqualMaps(m1, mExpected map[string]int) bool {
+	if len(m1) != len(mExpected) {
 		return false
 	}
-	for i := range arrTemplate {
-		if arrTemplate[i] != arr1[i] {
+	for key, val := range mExpected {
+		valM1, ok := m1[key]
+		if !ok || valM1 != val {
 			return false
 		}
 	}
 	return true
 }
 
-func TestAddElements(t *testing.T) {
-	testArr := []int{1, 2, 3, 4, 5}
-	num := 7
-	expectedArr := []int{1, 2, 3, 4, 5, num}
+type testRemoveCase struct {
+	key         string
+	initMap     map[string]int
+	expextedMap map[string]int
+}
 
-	arr := addElements(testArr, num)
-	if !equalSlices(arr, expectedArr) {
-		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
-			expectedArr, arr)
+func TestRevomve(t *testing.T) {
+	testCases := []testRemoveCase{
+		{
+			"F",
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4, "F": 5},
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4},
+		},
+		{
+			"Ч",
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4},
+			map[string]int{"О": 1, "Д": 2, "Т": 3},
+		},
+		{
+			"Т",
+			map[string]int{"О": 1, "Д": 2, "Т": 3},
+			map[string]int{"О": 1, "Д": 2},
+		},
+		{
+			"Д",
+			map[string]int{"О": 1, "Д": 2},
+			map[string]int{"О": 1},
+		},
+		{
+			"О",
+			map[string]int{"О": 1},
+			map[string]int{},
+		},
+	}
+
+	for _, el := range testCases {
+		si := &stringIntMap{el.initMap}
+
+		si.remove(el.key)
+		if !isEqualMaps(si.stringInts, el.expextedMap) {
+			t.Errorf("\nОжидалась карта:\n\t%v\nимеется:\n\t%v\n",
+				el.expextedMap, *si)
+		}
 	}
 }
 
-func TestCopySlice(t *testing.T) {
-	testArr := []int{1, 2, 3, 4, 5}
+type testCopyCase struct {
+	m           map[string]int
+	expectedMap map[string]int
+}
 
-	arr := copySlice(testArr)
-
-	testArr[0] = testArr[0] + 1
-	if equalSlices(arr, testArr) {
-		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
-			[]int{1, 2, 3, 4, 5}, arr)
+func TestCopy(t *testing.T) {
+	testCases := []testCopyCase{
+		{
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4},
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4},
+		},
+		{
+			map[string]int{},
+			map[string]int{},
+		},
+		{
+			map[string]int{"": 0},
+			map[string]int{"": 0},
+		},
+		{
+			map[string]int{"-": -500000000000},
+			map[string]int{"-": -500000000000},
+		},
+		{
+			map[string]int{"漢字": 0},
+			map[string]int{"漢字": 0},
+		},
 	}
 
-	testArr = append(testArr, testArr...)
-	if equalSlices(arr, testArr) {
-		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
-			[]int{1, 2, 3, 4, 5}, arr)
+	key := "testKey"
+	var val int
+	for _, el := range testCases {
+		si := &stringIntMap{el.m}
+		newM := si.copy()
+
+		if !isEqualMaps(si.stringInts, newM) {
+			t.Errorf("\nОжидалась карта:\n\t%v\nимеется:\n\t%v\n",
+				el.expectedMap, newM)
+		}
+
+		si.stringInts[key] = val
+		if isEqualMaps(si.stringInts, newM) {
+			t.Errorf("\nКарта изменяется влед за базовой картой.\nБазовая карта:\n\t%v\nИмеется:\n\t%v\nДолжно быть:\n\t%v\n",
+				si.stringInts, newM, el.expectedMap)
+		}
+
+		if len(newM) == 0 {
+			continue
+		}
+
+		var randKey string
+		for key := range newM {
+			randKey = key
+		}
+
+		newM[randKey] = val
+		if isEqualMaps(si.stringInts, newM) {
+			t.Errorf("\nКарта изменяется влед за копией.\nБазовая карта:\n\t%v\nИзменённая копия:\n\t%v\nДолжно быть:\n\t%v\n",
+				si.stringInts, newM, el.expectedMap)
+		}
 	}
 }
 
-func TestRemoveElement(t *testing.T) {
-	testArr := []int{1, 2, 3, 4, 5}
-	expectedArr := []int{2, 3, 4, 5}
-	idxForRemove := 0
-	arrAfterDropElem := removeElement(testArr, idxForRemove)
+type testIsExistsCase struct {
+	key    string
+	m      map[string]int
+	status bool
+}
 
-	if !equalSlices(arrAfterDropElem, expectedArr) {
-		t.Errorf("\nОжидалось:\n\t%d\nполучили:\n\t%d",
-			expectedArr, arrAfterDropElem)
+func TestIsExists(t *testing.T) {
+	testCases := []testIsExistsCase{
+		{
+			"О",
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4},
+			true,
+		},
+		{
+			"1",
+			map[string]int{},
+			false,
+		},
+		{
+			"",
+			map[string]int{},
+			false,
+		},
+		{
+			"",
+			map[string]int{"": 0},
+			true,
+		},
+		{
+			"0",
+			map[string]int{"0": 0},
+			true,
+		},
+		{
+			"0",
+			map[string]int{"0": 5, "50": 0},
+			true,
+		},
+		{
+			"-",
+			map[string]int{"-": -500000000000},
+			true,
+		},
+		{
+			"漢字",
+			map[string]int{"漢字": 0},
+			true,
+		},
+	}
+	for _, el := range testCases {
+		si := &stringIntMap{el.m}
+		found := si.isExists(el.key)
+		if found != el.status {
+			t.Errorf("\nКлюч `%s`:\nожидалось:\n\t%v\nполучено:\n\t%v\n\t[карта: %v]",
+				el.key, el.status, found, el.m)
+		}
+	}
+}
+
+type testGetCase struct {
+	key    string
+	m      map[string]int
+	val    int
+	status bool
+}
+
+func TestGet(t *testing.T) {
+	testCases := []testGetCase{
+		{
+			"О",
+			map[string]int{"О": 1, "Д": 2, "Т": 3, "Ч": 4},
+			1,
+			true,
+		},
+		{
+			"1",
+			map[string]int{},
+			0,
+			false,
+		},
+		{
+			"",
+			map[string]int{},
+			0,
+			false,
+		},
+		{
+			"",
+			map[string]int{"": 0},
+			0,
+			true,
+		},
+		{
+			"0",
+			map[string]int{"0": 0},
+			0,
+			true,
+		},
+		{
+			"0",
+			map[string]int{"0": 5, "50": 0},
+			5,
+			true,
+		},
+		{
+			"-",
+			map[string]int{"-": -500000000000},
+			-500000000000,
+			true,
+		},
+		{
+			"漢字",
+			map[string]int{"漢字": 0},
+			0,
+			true,
+		},
+	}
+	for _, el := range testCases {
+		si := &stringIntMap{el.m}
+		val, ok := si.get(el.key)
+		if ok != el.status {
+			t.Errorf("\nКлюч `%s`:\nожидалось:\n\t%v\nполучено:\n\t%v\n\t[карта: %v]",
+				el.key, el.status, ok, el.m)
+		}
+		if val != el.val {
+			t.Errorf("\nКлюч `%s`:\nожидалось:\n\t%d\nполучено:\n\t%d\n\t[карта: %v]",
+				el.key, val, el.val, el.m)
+		}
 	}
 }
