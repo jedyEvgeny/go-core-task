@@ -1,28 +1,34 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func main() {
-	slice1 := []string{"apple", "banana", "cherry", "date", "43", "lead", "gno1"}
-	slice2 := []string{"banana", "date", "fig"}
+	a := []int{65, 3, 58, 678, 64}
+	b := []int{64, 2, 3, 43}
 
-	strs := differenceSlice(slice1, slice2)
-	fmt.Println(strs)
+	nums, ok := intersectionSlices(a, b)
+	if ok {
+		fmt.Println(nums)
+	}
+	if !ok {
+		fmt.Println("в слайсах нет одинаковых элементов")
+	}
 }
 
-func differenceSlice(s1, s2 []string) []string {
-	uniqStrs := make(map[string]struct{})
-	for _, str := range s2 {
-		uniqStrs[str] = struct{}{}
+func intersectionSlices(a, b []int) ([]int, bool) {
+	var found bool
+	numCounts := make(map[int]int)
+	for _, num := range a {
+		numCounts[num]++
 	}
-	strs := make([]string, 0, 1)
-	for _, str := range s1 {
-		_, ok := uniqStrs[str]
-		if !ok {
-			strs = append(strs, str)
+	intersectionNums := make([]int, 0, 1)
+	for _, el := range b {
+		val, ok := numCounts[el]
+		if ok && val > 0 {
+			found = true
+			intersectionNums = append(intersectionNums, el)
+			numCounts[el]--
 		}
 	}
-	return strs
+	return intersectionNums, found
 }

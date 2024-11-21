@@ -2,73 +2,81 @@ package main
 
 import "testing"
 
-type testDifferenceSliceCase struct {
-	s1, s2, expectedStrs []string
+type testIntersectionSlicesCase struct {
+	s1, s2, expectedStrs []int
+	found                bool
 }
 
 func TestDifferenceSlice(t *testing.T) {
-	testCases := []testDifferenceSliceCase{
+	testCases := []testIntersectionSlicesCase{
 		{
-			[]string{"apple", "banana", "cherry", "date", "43", "lead", "gno1"},
-			[]string{"banana", "date", "fig"},
-			[]string{"apple", "cherry", "43", "lead", "gno1"},
+			[]int{65, 3, 58, 678, 64},
+			[]int{64, 2, 3, 43},
+			[]int{64, 3},
+			true,
 		},
 		{
-			[]string{},
-			[]string{},
-			[]string{},
+			[]int{},
+			[]int{},
+			[]int{},
+			false,
 		},
 		{
-			[]string{""},
-			[]string{},
-			[]string{""},
+			[]int{0},
+			[]int{},
+			[]int{},
+			false,
 		},
 		{
-			[]string{},
-			[]string{""},
-			[]string{},
+			[]int{},
+			[]int{0},
+			[]int{},
+			false,
 		},
 		{
-			[]string{"0"},
-			[]string{""},
-			[]string{"0"},
+			[]int{-1, -2, -3, -4, -5},
+			[]int{1, 2, 3, 4, 5},
+			[]int{},
+			false,
 		},
 		{
-			[]string{""},
-			[]string{"0"},
-			[]string{""},
+			[]int{-1, -2, -3, -4, -5},
+			[]int{-1, 2, 3, 4, 5},
+			[]int{-1},
+			true,
 		},
 		{
-			[]string{"apple", "banana", "banana"},
-			[]string{"banana"},
-			[]string{"apple"},
+			[]int{1, 1, 1, 1, 1},
+			[]int{1},
+			[]int{1},
+			true,
 		},
 		{
-			[]string{"apple", "banana"},
-			[]string{"banana", "banana"},
-			[]string{"apple"},
+			[]int{1},
+			[]int{1, 1, 1, 1, 1},
+			[]int{1},
+			true,
 		},
 		{
-			[]string{"banana", "banana", "banana"},
-			[]string{"banana"},
-			[]string{},
+			[]int{2},
+			[]int{1, 1, 1, 1, 1},
+			[]int{},
+			false,
 		},
 	}
 	for _, el := range testCases {
-		strs := differenceSlice(el.s1, el.s2)
-		if !equalSlices(strs, el.expectedStrs) {
-			t.Errorf("\nВходной слайс №1: %s\nВходной слайс №1: %s\nОжидался результат:\n\t%s\nполучили:\n\t%s\n",
-				el.s1, el.s2, el.expectedStrs, strs)
+		strs, ok := intersectionSlices(el.s1, el.s2)
+		if !equalSlices(strs, el.expectedStrs) || ok != el.found {
+			t.Errorf("\nВходной слайс №1: %d\nВходной слайс №2: %d\nОжидался результат:\n\t%d %v\nполучили:\n\t%d %v\n",
+				el.s1, el.s2, el.expectedStrs, el.found, strs, ok)
 		}
 	}
 }
 
-func equalSlices(arr1, arrTemplate []string) bool {
+func equalSlices(arr1, arrTemplate []int) bool {
 	if len(arr1) != len(arrTemplate) {
 		return false
 	}
-	//Проверка с учётом порядка элементов
-	//Если порядок не важен, можно сделать проверку через карту
 	for i := range arrTemplate {
 		if arrTemplate[i] != arr1[i] {
 			return false
