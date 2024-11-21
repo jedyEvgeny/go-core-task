@@ -1,86 +1,73 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"os"
+	"sync"
+	"testing"
+)
 
-type testIntersectionSlicesCase struct {
-	s1, s2, expectedStrs []int
-	found                bool
-}
+func TestGenerateRandomNumbers(t *testing.T) {
+	randomNumbers := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-func TestDifferenceSlice(t *testing.T) {
-	testCases := []testIntersectionSlicesCase{
-		{
-			[]int{65, 3, 58, 678, 64},
-			[]int{64, 2, 3, 43},
-			[]int{64, 3},
-			true,
-		},
-		{
-			[]int{},
-			[]int{},
-			[]int{},
-			false,
-		},
-		{
-			[]int{0},
-			[]int{},
-			[]int{},
-			false,
-		},
-		{
-			[]int{},
-			[]int{0},
-			[]int{},
-			false,
-		},
-		{
-			[]int{-1, -2, -3, -4, -5},
-			[]int{1, 2, 3, 4, 5},
-			[]int{},
-			false,
-		},
-		{
-			[]int{-1, -2, -3, -4, -5},
-			[]int{-1, 2, 3, 4, 5},
-			[]int{-1},
-			true,
-		},
-		{
-			[]int{1, 1, 1, 1, 1},
-			[]int{1},
-			[]int{1},
-			true,
-		},
-		{
-			[]int{1},
-			[]int{1, 1, 1, 1, 1},
-			[]int{1},
-			true,
-		},
-		{
-			[]int{2},
-			[]int{1, 1, 1, 1, 1},
-			[]int{},
-			false,
-		},
-	}
-	for _, el := range testCases {
-		strs, ok := intersectionSlices(el.s1, el.s2)
-		if !equalSlices(strs, el.expectedStrs) || ok != el.found {
-			t.Errorf("\nВходной слайс №1: %d\nВходной слайс №2: %d\nОжидался результат:\n\t%d %v\nполучили:\n\t%d %v\n",
-				el.s1, el.s2, el.expectedStrs, el.found, strs, ok)
+	go generateRandomNumbers(randomNumbers, &wg)
+
+	count, minNum, maxNum := 0, 0, 0
+	for val := range randomNumbers {
+		count++
+		if minNum > val {
+			minNum = val
+		}
+		if maxNum > val {
+			maxNum = val
 		}
 	}
+
+	wg.Wait()
+
+	if count != numCount {
+		t.Errorf("\nОжидалось:\n\t%d чисел\nполучили\n\t%d чисел\n",
+			numCount, count)
+	}
+	if minNum < 0 || maxNum > numRange-1 {
+		t.Errorf("Нарушен допустимый диапазон. Ожидалось:\n\t[%d:%d)\nполучили:\n\t[%d:%d)",
+			0, numRange, minNum, maxNum)
+	}
+
 }
 
-func equalSlices(arr1, arrTemplate []int) bool {
-	if len(arr1) != len(arrTemplate) {
-		return false
-	}
-	for i := range arrTemplate {
-		if arrTemplate[i] != arr1[i] {
-			return false
+func TestPrintRandomNumbers(t *testing.T) {
+	ch := make(chan int)
+	go func() {
+		for _, num := range []int{1, 2, 3, 4, 5} {
+			ch <- num
 		}
+		close(ch)
+	}()
+
+	var buf bytes.Buffer
+	stdout := os.Stdout
+	defer func() {
+		os.Stdout = stdout
+	}()
+	r, out, _ := os.Pipe() // трубы для перенаправления
+	os.Stdout = out        // стандартный вывод не в терминал, а в "out"
+
+	go func() {
+		defer func() { _ = out.Close() }()
+		printRandomNumbers(ch)
+	}()
+
+	buf.ReadFrom(r)    // Читаем вывод функции из r
+	os.Stdout = stdout // Вернули стандартный вывод
+
+	output := buf.String()
+	expectedOutput := "1 -> 2 -> 3 -> 4 -> 5 -> "
+
+	if output != expectedOutput {
+		t.Errorf("\nОжидалось:\n\t%v\nПолучили\n\t%v\n",
+			output, expectedOutput)
 	}
-	return true
 }

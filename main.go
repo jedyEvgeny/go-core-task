@@ -1,34 +1,41 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"sync"
+)
+
+const (
+	numCount = 10
+	numRange = 100_000
+)
 
 func main() {
-	a := []int{65, 3, 58, 678, 64}
-	b := []int{64, 2, 3, 43}
+	fmt.Println("Генерируем случайные числа:")
+	randomNumbers := make(chan int)
 
-	nums, ok := intersectionSlices(a, b)
-	if ok {
-		fmt.Println(nums)
-	}
-	if !ok {
-		fmt.Println("в слайсах нет одинаковых элементов")
-	}
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go generateRandomNumbers(randomNumbers, &wg)
+	go printRandomNumbers(randomNumbers)
+
+	wg.Wait()
+	fmt.Println("конец списка")
 }
 
-func intersectionSlices(a, b []int) ([]int, bool) {
-	var found bool
-	numCounts := make(map[int]int)
-	for _, num := range a {
-		numCounts[num]++
+func generateRandomNumbers(randomNumbers chan int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for i := 0; i < numCount; i++ {
+		num := rand.Intn(numRange)
+		randomNumbers <- num
 	}
-	intersectionNums := make([]int, 0, 1)
-	for _, el := range b {
-		val, ok := numCounts[el]
-		if ok && val > 0 {
-			found = true
-			intersectionNums = append(intersectionNums, el)
-			numCounts[el]--
-		}
+	close(randomNumbers)
+}
+
+func printRandomNumbers(randomNumbers chan int) {
+	for num := range randomNumbers {
+		fmt.Printf("%d -> ", num)
 	}
-	return intersectionNums, found
 }
