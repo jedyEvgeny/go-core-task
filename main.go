@@ -37,8 +37,8 @@ func cube(numbers <-chan uint8, cubes chan<- float64) {
 	}
 }
 
-func consumer(squares <-chan float64) {
-	for squared := range squares {
-		fmt.Printf("Получено: %v\n", squared)
+func consumer(cubes <-chan float64) {
+	for elem := range cubes {
+		fmt.Printf("Получено: %v\n", elem)
 	}
 }
