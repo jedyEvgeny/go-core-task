@@ -5,48 +5,70 @@ import (
 	"time"
 )
 
-func main() {
-	ch1, ch2, ch3 := make(chan int), make(chan int), make(chan int)
-
-	go func() {
-		defer close(ch1)
-		for i := 0; i < 5; i++ {
-			ch1 <- i
-		}
-	}()
-	go func() {
-		defer close(ch2)
-		for i := 5; i < 10; i++ {
-			ch2 <- i
-		}
-	}()
-	go func() {
-		defer close(ch3)
-		for i := 10; i < 15; i++ {
-			ch3 <- i
-		}
-	}()
-
-	merged := mergeChannels(ch1, ch2, ch3)
-
-	for val := range merged {
-		time.Sleep(100 * time.Millisecond)
-		fmt.Printf("%d -> ", val)
-	}
-	fmt.Println("данные из канала прочитаны")
+type semaphor struct {
+	semaphor chan struct{}
+	count    int
+	doneCh   chan struct{}
 }
 
-func mergeChannels(chls ...<-chan int) <-chan int {
-	resCh := make(chan int, 5)
+const maxGorutines = 2
 
-	go func() {
-		defer close(resCh)
+func main() {
+	s := new(maxGorutines)
 
-		for _, ch := range chls {
-			for val := range ch {
-				resCh <- val
-			}
+	for i := 0; i < 5; i++ {
+		s.add(1)
+		go func(i int) {
+			defer s.done()
+			printLoad(i)
+			fmt.Printf("\rЗапуск сервиса №%d завершён!\n", i+1)
+		}(i)
+	}
+
+	s.wait()
+	fmt.Println("Все сервисы запущены")
+}
+
+func new(size int) *semaphor {
+	return &semaphor{
+		semaphor: make(chan struct{}, size),
+		count:    0,
+		doneCh:   make(chan struct{}),
+	}
+}
+
+func (s *semaphor) add(delta int) {
+	s.count += delta
+	for i := 0; i < delta; i++ {
+		s.semaphor <- struct{}{}
+	}
+}
+
+func (s *semaphor) done() {
+	<-s.semaphor
+	s.count--
+	if s.count == 0 {
+		close(s.doneCh)
+	}
+}
+
+func (s *semaphor) wait() {
+	<-s.doneCh
+}
+
+func printLoad(i int) {
+	symbols := []string{"/", "|", "-", "\\"}
+	delay := 900
+	if i%2 != 0 {
+		delay = 1300
+	}
+
+	end := time.Now().Add(time.Duration(delay) * time.Millisecond)
+
+	for time.Now().Before(end) {
+		for _, el := range symbols {
+			fmt.Printf("\rЗапускаем сервис: %s", el)
+			time.Sleep(150 * time.Millisecond)
 		}
-	}()
-	return resCh
+	}
 }

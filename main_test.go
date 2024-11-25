@@ -1,83 +1,48 @@
 package main
 
 import (
+	"sync"
 	"testing"
 )
 
-func TestMergeChannels(t *testing.T) {
-	const (
-		maxIdxChan = 10
-		minIdxChan = 0
-	)
+func TestMaxGorutines(t *testing.T) {
+	const maxGorutines = 3
 
-	ch1 := make(chan int)
-	ch2 := make(chan int)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 
-	go func() {
-		defer close(ch1)
-		for i := minIdxChan; i < maxIdxChan/2; i++ {
-			ch1 <- i
-		}
-	}()
+	testCase := []int{1, 3, 5, 10, 50}
 
-	go func() {
-		defer close(ch2)
-		for i := maxIdxChan / 2; i < maxIdxChan; i++ {
-			ch2 <- i
-		}
-	}()
+	for _, totalTasks := range testCase {
+		s := new(maxGorutines)
 
-	merged := mergeChannels(ch1, ch2)
+		var activeTasks int
+		var exceededGorutins bool
 
-	var count int
-	valueDoubles := make(map[int]bool)
+		for i := 0; i < totalTasks; i++ {
+			wg.Add(1)
+			s.add(1)
 
-	for val := range merged {
-		if val < minIdxChan || val > maxIdxChan-1 {
-			t.Errorf("\nНеожиданное значение в канале\nОжидалось:\n\t[%d:%d)\nполучили:\n\t%d",
-				minIdxChan, maxIdxChan-1, val)
+			go func(i int) {
+				defer s.done()
+				defer wg.Done()
+
+				mu.Lock()
+				activeTasks++
+				if activeTasks > maxGorutines {
+					exceededGorutins = true
+				}
+				activeTasks--
+				mu.Unlock()
+			}(i)
 		}
 
-		if valueDoubles[val] {
-			t.Errorf("\nОжидалось отсутствие дубликатов в канале.\nДубликат:\n\t%d",
-				val)
-		}
+		wg.Wait()
+		s.wait()
 
-		count++
-		valueDoubles[val] = true
-	}
-
-	if count != maxIdxChan {
-		t.Errorf("\nНеожиданное количество значений в канале. Ожидалось:\n\t%d\nполучили:\n\t%d",
-			maxIdxChan, count)
-	}
-}
-
-func BenchmarkMergeChannels(b *testing.B) {
-	const (
-		maxIdxCh = 10_000
-	)
-
-	ch1 := make(chan int)
-	ch2 := make(chan int)
-
-	go func() {
-		defer close(ch1)
-		for i := 0; i < maxIdxCh/2; i++ {
-			ch1 <- i
-		}
-	}()
-
-	go func() {
-		defer close(ch2)
-		for i := maxIdxCh / 2; i < maxIdxCh; i++ {
-			ch2 <- i
-		}
-	}()
-
-	for i := 0; i < b.N; i++ {
-		merged := mergeChannels(ch1, ch2)
-		for range merged {
+		if exceededGorutins {
+			str := "Превышено максимальное количество горутин"
+			t.Fatalf("%s\n\t%d > %d", str, activeTasks, maxGorutines)
 		}
 	}
 }
