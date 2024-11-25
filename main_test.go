@@ -1,73 +1,83 @@
 package main
 
 import (
-	"bytes"
-	"os"
-	"sync"
 	"testing"
 )
 
-func TestGenerateRandomNumbers(t *testing.T) {
-	randomNumbers := make(chan int)
-	var wg sync.WaitGroup
-	wg.Add(1)
+func TestMergeChannels(t *testing.T) {
+	const (
+		maxIdxChan = 10
+		minIdxChan = 0
+	)
 
-	go generateRandomNumbers(randomNumbers, &wg)
+	ch1 := make(chan int)
+	ch2 := make(chan int)
 
-	count, minNum, maxNum := 0, 0, 0
-	for val := range randomNumbers {
+	go func() {
+		defer close(ch1)
+		for i := minIdxChan; i < maxIdxChan/2; i++ {
+			ch1 <- i
+		}
+	}()
+
+	go func() {
+		defer close(ch2)
+		for i := maxIdxChan / 2; i < maxIdxChan; i++ {
+			ch2 <- i
+		}
+	}()
+
+	merged := mergeChannels(ch1, ch2)
+
+	var count int
+	valueDoubles := make(map[int]bool)
+
+	for val := range merged {
+		if val < minIdxChan || val > maxIdxChan-1 {
+			t.Errorf("\nНеожиданное значение в канале\nОжидалось:\n\t[%d:%d)\nполучили:\n\t%d",
+				minIdxChan, maxIdxChan-1, val)
+		}
+
+		if valueDoubles[val] {
+			t.Errorf("\nОжидалось отсутствие дубликатов в канале.\nДубликат:\n\t%d",
+				val)
+		}
+
 		count++
-		if minNum > val {
-			minNum = val
-		}
-		if maxNum > val {
-			maxNum = val
-		}
+		valueDoubles[val] = true
 	}
 
-	wg.Wait()
-
-	if count != numCount {
-		t.Errorf("\nОжидалось:\n\t%d чисел\nполучили\n\t%d чисел\n",
-			numCount, count)
+	if count != maxIdxChan {
+		t.Errorf("\nНеожиданное количество значений в канале. Ожидалось:\n\t%d\nполучили:\n\t%d",
+			maxIdxChan, count)
 	}
-	if minNum < 0 || maxNum > numRange-1 {
-		t.Errorf("Нарушен допустимый диапазон. Ожидалось:\n\t[%d:%d)\nполучили:\n\t[%d:%d)",
-			0, numRange, minNum, maxNum)
-	}
-
 }
 
-func TestPrintRandomNumbers(t *testing.T) {
-	ch := make(chan int)
+func BenchmarkMergeChannels(b *testing.B) {
+	const (
+		maxIdxCh = 10_000
+	)
+
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+
 	go func() {
-		for _, num := range []int{1, 2, 3, 4, 5} {
-			ch <- num
+		defer close(ch1)
+		for i := 0; i < maxIdxCh/2; i++ {
+			ch1 <- i
 		}
-		close(ch)
 	}()
-
-	var buf bytes.Buffer
-	stdout := os.Stdout
-	defer func() {
-		os.Stdout = stdout
-	}()
-	r, out, _ := os.Pipe() // трубы для перенаправления
-	os.Stdout = out        // стандартный вывод не в терминал, а в "out"
 
 	go func() {
-		defer func() { _ = out.Close() }()
-		printRandomNumbers(ch)
+		defer close(ch2)
+		for i := maxIdxCh / 2; i < maxIdxCh; i++ {
+			ch2 <- i
+		}
 	}()
 
-	buf.ReadFrom(r)    // Читаем вывод функции из r
-	os.Stdout = stdout // Вернули стандартный вывод
-
-	output := buf.String()
-	expectedOutput := "1 -> 2 -> 3 -> 4 -> 5 -> "
-
-	if output != expectedOutput {
-		t.Errorf("\nОжидалось:\n\t%v\nПолучили\n\t%v\n",
-			output, expectedOutput)
+	for i := 0; i < b.N; i++ {
+		merged := mergeChannels(ch1, ch2)
+		for range merged {
+		}
 	}
 }

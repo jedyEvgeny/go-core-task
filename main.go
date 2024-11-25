@@ -2,40 +2,51 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
-	"sync"
-)
-
-const (
-	numCount = 10
-	numRange = 100_000
+	"time"
 )
 
 func main() {
-	fmt.Println("Генерируем случайные числа:")
-	randomNumbers := make(chan int)
+	ch1, ch2, ch3 := make(chan int), make(chan int), make(chan int)
 
-	var wg sync.WaitGroup
+	go func() {
+		defer close(ch1)
+		for i := 0; i < 5; i++ {
+			ch1 <- i
+		}
+	}()
+	go func() {
+		defer close(ch2)
+		for i := 5; i < 10; i++ {
+			ch2 <- i
+		}
+	}()
+	go func() {
+		defer close(ch3)
+		for i := 10; i < 15; i++ {
+			ch3 <- i
+		}
+	}()
 
-	wg.Add(1)
-	go generateRandomNumbers(randomNumbers, &wg)
-	go printRandomNumbers(randomNumbers)
+	merged := mergeChannels(ch1, ch2, ch3)
 
-	wg.Wait()
-	fmt.Println("конец списка")
+	for val := range merged {
+		time.Sleep(100 * time.Millisecond)
+		fmt.Printf("%d -> ", val)
+	}
+	fmt.Println("данные из канала прочитаны")
 }
 
-func generateRandomNumbers(randomNumbers chan int, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for i := 0; i < numCount; i++ {
-		num := rand.Intn(numRange)
-		randomNumbers <- num
-	}
-	close(randomNumbers)
-}
+func mergeChannels(chls ...<-chan int) <-chan int {
+	resCh := make(chan int, 5)
 
-func printRandomNumbers(randomNumbers chan int) {
-	for num := range randomNumbers {
-		fmt.Printf("%d -> ", num)
-	}
+	go func() {
+		defer close(resCh)
+
+		for _, ch := range chls {
+			for val := range ch {
+				resCh <- val
+			}
+		}
+	}()
+	return resCh
 }
