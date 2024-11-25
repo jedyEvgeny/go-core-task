@@ -8,11 +8,11 @@ import (
 
 func main() {
 	numbers := make(chan uint8)
-	squares := make(chan float64)
+	cubes := make(chan float64)
 
 	go producer(numbers)
-	go cube(numbers, squares)
-	go consumer(squares)
+	go cube(numbers, cubes)
+	go consumer(cubes)
 
 	time.Sleep(5 * time.Second)
 }
@@ -27,13 +27,13 @@ func producer(numbers chan<- uint8) {
 	}
 }
 
-func cube(numbers <-chan uint8, squares chan<- float64) {
-	defer close(squares)
+func cube(numbers <-chan uint8, cubes chan<- float64) {
+	defer close(cubes)
 	for num := range numbers {
 		numF := float64(num)
-		squared := numF * numF * numF
-		fmt.Printf("Отправленное число: %v\t", squared)
-		squares <- squared
+		cubed := numF * numF * numF
+		fmt.Printf("Отправленное число: %v\t", cubed)
+		cubes <- cubed
 	}
 }
 
